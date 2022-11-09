@@ -323,4 +323,65 @@ df3.sort(df3.tip.desc()).show()
 
 # COMMAND ----------
 
+#group and aggegrate functions
 
+# COMMAND ----------
+
+spark
+
+# COMMAND ----------
+
+df3.show()
+
+# COMMAND ----------
+
+a = df3.groupBy('size').sum()
+
+# COMMAND ----------
+
+a.show()
+
+# COMMAND ----------
+
+df3.groupBy('size').mean().show()
+
+# COMMAND ----------
+
+df3.groupBy('size').max().show()
+
+# COMMAND ----------
+
+  df3.groupBy('size').count().show()
+
+# COMMAND ----------
+
+from pyspark.sql import SparkSession
+
+# COMMAND ----------
+
+spark = SparkSession.builder.appName("new1").getOrCreate()
+
+# COMMAND ----------
+
+spark
+
+# COMMAND ----------
+
+spark.read.csv("")
+
+
+# COMMAND ----------
+
+df = spark.createDataFrame(data=[(1,2),(2,4),(5,6)],schema=("a","b"))
+
+# COMMAND ----------
+
+df.show()
+
+# COMMAND ----------
+
+spark.read.format("com.crealytics.spark.excel") \
+    .option("header", "true") \
+    .option("inferSchema", "true") \
+    .option("dataAddress", "'NameOfYourExcelSheet'!A1") \
+    .load(filePath)
