@@ -11,7 +11,7 @@ from pyspark.sql.types import StructType,StructField, StringType, IntegerType
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, explode, sum, desc, struct, when, row_number, rank, dense_rank, percent_rank
+from pyspark.sql.functions import col, explode, sum, desc, struct, when, row_number, rank, dense_rank, percent_rank,avg, min, max 
 
 # COMMAND ----------
 
@@ -820,7 +820,7 @@ df.withColumn("dense_rank",dense_rank().over(windowSpec)) \
 
 # COMMAND ----------
 
-#percent_rank - % of total recodes in each partitions
+#percent_rank - % of total recodes in each partitions b/w 0 to 1
 df.withColumn("percent_rank", percent_rank().over(windowSpec)) \
     .show()
 
@@ -835,3 +835,223 @@ df.withColumn("ntile",ntile(2).over(windowSpec)) \
 from pyspark.sql.functions import cume_dist    
 df.withColumn("cume_dist",cume_dist().over(windowSpec)) \
    .show()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import lag    
+df.withColumn("lag",lag("salary",2).over(windowSpec)) \
+      .show()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import lead    
+df.withColumn("lead",lead("salary",2).over(windowSpec)) \
+    .show()
+
+# COMMAND ----------
+
+
+windowSpecAgg  = Window.partitionBy("department")
+from pyspark.sql.functions import col,avg,sum,min,max,row_number 
+df.withColumn("row",row_number().over(windowSpec)) \
+  .withColumn("avg", avg(col("salary")).over(windowSpecAgg)) \
+  .withColumn("sum", sum(col("salary")).over(windowSpecAgg)) \
+  .withColumn("min", min(col("salary")).over(windowSpecAgg)) \
+  .withColumn("max", max(col("salary")).over(windowSpecAgg)) \
+  .where(col("row")==1).select("department","avg","sum","min","max") \
+  .show()
+
+# COMMAND ----------
+
+spark = SparkSession.builder \
+            .appName('SparkByExamples.com') \
+            .getOrCreate()
+data=[["1","2020-02-01"],["2","2019-03-01"],["3","2021-03-01"]]
+df=spark.createDataFrame(data,["id","input"])
+df.show()
+
+# COMMAND ----------
+
+df.printSchema()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import date_format
+df.select(col("input"), 
+    date_format(col("input"), "MM-dd-yyyy").alias("date_format") 
+  ).show()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import *
+#current_date, date_format
+df.select( date_format(current_date(),"MM-dd-yyyy").alias("current_date")).show(1)
+
+# COMMAND ----------
+
+#datediff
+df.select(col("input"), 
+    datediff(current_date(),col("input")).alias("datediff")  
+  ).show()
+
+# COMMAND ----------
+
+df.select(col("input"), 
+    months_between(current_date(),col("input")).alias("datediff")  
+  ).show()
+
+# COMMAND ----------
+
+#add_months() , date_add(), date_sub()
+df.select(col("input"), 
+    add_months(col("input"),3).alias("add_months"), 
+    add_months(col("input"),-3).alias("sub_months"), 
+    date_add(col("input"),4).alias("date_add"), 
+    date_sub(col("input"),4).alias("date_sub") 
+  ).show()
+
+# COMMAND ----------
+
+df.select(current_date(), 
+    add_months(current_date(),3).alias("add_months"), 
+    add_months(current_date(),-3).alias("sub_months"), 
+    date_add(current_date(),4).alias("date_add"), 
+    date_sub(current_date(),4).alias("date_sub") 
+  ).show()
+
+# COMMAND ----------
+
+df.select(col("input"), 
+     year(col("input")).alias("year"), 
+     month(col("input")).alias("month"), 
+     next_day(col("input"),"Sunday").alias("next_day"), 
+     weekofyear(col("input")).alias("weekofyear"),
+     dayofmonth(col("input")).alias("dayofmonth")
+  ).show()
+
+
+# COMMAND ----------
+
+df.select(col("input"),  
+     dayofweek(col("input")).alias("dayofweek"), 
+     dayofmonth(col("input")).alias("dayofmonth"), 
+     dayofyear(col("input")).alias("dayofyear"), 
+  ).show()
+
+# COMMAND ----------
+
+data=[["1","02-01-2020 11 01 19 06"],["2","03-01-2019 12 01 19 406"],["3","03-01-2021 12 01 19 406"]]
+df2=spark.createDataFrame(data,["id","input"])
+df2.show(truncate=False)
+
+# COMMAND ----------
+
+#current_timestamp()
+df2.select(current_timestamp().alias("current_timestamp")
+  ).show(1,truncate=False)
+
+# COMMAND ----------
+
+df3 = df2.select(col("input"), 
+    to_timestamp(col("input"), "MM-dd-yyyy HH mm ss SSS").alias("to_timestamp") 
+  )
+
+# COMMAND ----------
+
+
+df3.select(col("to_timestamp"), 
+    hour(col("to_timestamp")).alias("to_timestamp"), 
+    minute(col("to_timestamp")).alias("to_timestamp"),
+    second(col("to_timestamp")).alias("to_timestamp") 
+  ).show(truncate=False)
+
+
+# COMMAND ----------
+
+df3.show(truncate = False)
+
+# COMMAND ----------
+
+df3.printSchema()
+
+# COMMAND ----------
+
+data =[("James ","","Smith","36636","M",3000),
+              ("Michael ","Rose","","40288","M",4000),
+              ("Robert ","","Williams","42114","M",4000),
+              ("Maria ","Anne","Jones","39192","F",4000),
+              ("Jen","Mary","Brown","","F",-1)]
+columns=["firstname","middlename","lastname","dob","gender","salary"]
+df=spark.createDataFrame(data,columns)
+
+# COMMAND ----------
+
+df.write.parquet("/tmp/output/people.parquet")
+# we can append, overwrite
+
+# COMMAND ----------
+
+parDF=spark.read.parquet("/tmp/output/people.parquet")
+
+# COMMAND ----------
+
+parDF.show()
+
+# COMMAND ----------
+
+#df.createOrReplaceTempView("tablename") -> will convert df to table formate
+
+# COMMAND ----------
+
+#substring =  slicing
+data = [(1,"20200828"),(2,"20180525")]
+columns=["id","date"]
+df=spark.createDataFrame(data,columns)
+df.withColumn('year', substring('date', 1,4))\
+    .withColumn('month', substring('date', 5,2))\
+    .withColumn('day', substring('date', 7,2))
+df.printSchema()
+df.show(truncate=False)
+
+# COMMAND ----------
+
+#Databricks Utilities (dbutils) make it easy to perform powerful combinations of tasks. You can use the utilities to work with object storage efficiently, to chain and parameterize notebooks, and to work with secrets. dbutils are not supported outside of notebooks.
+dbutils.fs.help()
+
+
+# COMMAND ----------
+
+#
+
+# COMMAND ----------
+
+dbutils.data.summarize(df)
+
+# COMMAND ----------
+
+dbutils.help()
+
+# COMMAND ----------
+
+dbutils.fs.help("ls")
+
+# COMMAND ----------
+
+dbutils.data.help()
+
+# COMMAND ----------
+
+#widgets is used to create a notebook with perameters. eg: dynamic file path
+#you can run the notebook in another notebook by using dbutils.notebook.run("notebook path", timeout, {parmKey: value})
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
